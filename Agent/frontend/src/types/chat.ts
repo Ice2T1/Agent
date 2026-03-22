@@ -43,3 +43,15 @@ export interface StreamChunk {
   content?: string;
   data?: any;
 }
+
+/**
+ * 对话窗口
+ */
+export interface ChatWindow {
+  id: string;
+  title: string;
+  messages: Message[];
+  threadId: string;
+  createdAt: number;
+  updatedAt: number;
+}

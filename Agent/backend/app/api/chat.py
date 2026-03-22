@@ -108,42 +108,19 @@ async def stream_message(request: ChatRequest):
         
         async def generate():
             try:
-                # 流式调用
+                # 使用 astream_events 实现真正的 token 级流式输出
                 print("开始流式调用 Agent...")
-                async for chunk in graph.astream(input_data, config):
-                    print(f"收到 chunk: {chunk}")
-                    print(f"chunk 类型：{type(chunk)}")
-                    if isinstance(chunk, dict):
-                        print(f"chunk keys: {chunk.keys()}")
+                async for event in graph.astream_events(input_data, config, version="v2"):
+                    kind = event.get("event")
                     
-                    # LangGraph 返回的 chunk 可能是 {'agent': {'messages': [...]}} 格式
-                    # 需要递归提取 messages
-                    def extract_messages(chunk_data):
-                        """递归提取 messages"""
-                        messages = []
-                        if isinstance(chunk_data, dict):
-                            if 'messages' in chunk_data:
-                                messages.extend(chunk_data['messages'])
-                            # 递归检查其他 key
-                            for key, value in chunk_data.items():
-                                if key != 'messages':
-                                    messages.extend(extract_messages(value))
-                        elif isinstance(chunk_data, list):
-                            for item in chunk_data:
-                                messages.extend(extract_messages(item))
-                        return messages
-                    
-                    messages = extract_messages(chunk)
-                    print(f"提取到 {len(messages)} 条消息")
-                    
-                    for msg in messages:
-                        print(f"msg 类型：{type(msg)}, 内容：{msg.content if hasattr(msg, 'content') else 'N/A'}")
-                        if hasattr(msg, 'content'):
+                    # 监听 LLM token 生成事件
+                    if kind == "on_chat_model_stream":
+                        content = event.get("data", {}).get("chunk")
+                        if content and hasattr(content, 'content') and content.content:
                             data = StreamChunk(
                                 type="token",
-                                content=msg.content,
+                                content=content.content,
                             ).model_dump()
-                            print(f"发送数据：{data}")
                             yield f"data: {json.dumps(data)}\n\n"
                 
                 # 结束标记

@@ -7,16 +7,44 @@ import './Chat.css';
 
 interface ChatProps {
   className?: string;
+  windowId: string;
+  initialMessages: Message[];
+  initialThreadId: string;
+  onUpdateMessages: (messages: Message[]) => void;
+  onUpdateThreadId: (threadId: string) => void;
 }
 
-export default function Chat({ className }: ChatProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+export default function Chat({
+  className,
+  windowId,
+  initialMessages,
+  initialThreadId,
+  onUpdateMessages,
+  onUpdateThreadId,
+}: ChatProps) {
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [threadId, setThreadId] = useState<string | null>(null);
+  const [threadId, setThreadId] = useState<string>(initialThreadId);
   const [useStream, setUseStream] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 当初始消息变化时更新（切换窗口时）
+  useEffect(() => {
+    setMessages(initialMessages);
+    setThreadId(initialThreadId);
+  }, [windowId, initialMessages, initialThreadId]);
+
+  // 当消息变化时通知父组件
+  useEffect(() => {
+    onUpdateMessages(messages);
+  }, [messages, onUpdateMessages]);
+
+  // 当 threadId 变化时通知父组件
+  useEffect(() => {
+    onUpdateThreadId(threadId);
+  }, [threadId, onUpdateThreadId]);
 
   // 自动滚动到底部
   const scrollToBottom = () => {
@@ -46,7 +74,8 @@ export default function Chat({ className }: ChatProps) {
       content: input.trim(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
@@ -64,17 +93,11 @@ export default function Chat({ className }: ChatProps) {
         // 流式模式
         let accumulatedContent = '';
         
-        // 如果是第一次对话，需要先生成 thread_id
-        const currentThreadId = threadId || `thread-${Date.now()}`;
-        if (!threadId) {
-          setThreadId(currentThreadId);
-        }
-        
         console.log('开始流式请求...');
         abortControllerRef.current = await streamMessage(
           {
             message: userMessage.content,
-            thread_id: currentThreadId,
+            thread_id: threadId,
           },
           (chunk) => {
             console.log('收到 chunk:', chunk);
@@ -110,15 +133,10 @@ export default function Chat({ className }: ChatProps) {
         console.log('发送普通请求...');
         const response = await sendMessage({
           message: userMessage.content,
-          thread_id: threadId || undefined,
+          thread_id: threadId,
         });
 
         console.log('收到响应:', response);
-
-        // 更新 threadId
-        if (!threadId) {
-          setThreadId(response.thread_id);
-        }
 
         // 更新助手消息
         setMessages(prev => {
@@ -146,15 +164,6 @@ export default function Chat({ className }: ChatProps) {
     }
   };
 
-  const handleClearChat = () => {
-    setMessages([]);
-    setThreadId(null);
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-  };
-
   return (
     <div className={`chat-container ${className || ''}`}>
       <div className="chat-header">
@@ -169,13 +178,6 @@ export default function Chat({ className }: ChatProps) {
             />
             流式模式
           </label>
-          <button
-            onClick={handleClearChat}
-            disabled={isLoading || messages.length === 0}
-            className="clear-btn"
-          >
-            清空对话
-          </button>
         </div>
       </div>
 
@@ -186,21 +188,34 @@ export default function Chat({ className }: ChatProps) {
             <p className="hint">支持流式传输，实时显示回复内容</p>
           </div>
         ) : (
-          messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`message ${msg.role}`}
-            >
-              <div className="message-avatar">
-                {msg.role === 'user' ? '👤' : '🤖'}
+          messages.map((msg, index) => {
+            const isLastMessage = index === messages.length - 1;
+            const isThinking = isLoading && isLastMessage && msg.role === 'assistant' && !msg.content;
+            
+            return (
+              <div
+                key={index}
+                className={`message ${msg.role}`}
+              >
+                <div className="message-avatar">
+                  {msg.role === 'user' ? '👤' : '🤖'}
+                </div>
+                <div className="message-content">
+                  {isThinking ? (
+                    <div className="thinking-indicator">
+                      <span className="dot"></span>
+                      <span className="dot"></span>
+                      <span className="dot"></span>
+                    </div>
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.content}
+                    </ReactMarkdown>
+                  )}
+                </div>
               </div>
-              <div className="message-content">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {msg.content}
-                </ReactMarkdown>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -210,7 +225,7 @@ export default function Chat({ className }: ChatProps) {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={isLoading ? 'AI 正在思考...' : '输入消息...'}
+          placeholder="输入消息..."
           disabled={isLoading}
           className="chat-input"
         />
