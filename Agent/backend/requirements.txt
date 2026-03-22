@@ -1,0 +1,39 @@
+# LangGraph Agent Dependencies
+
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# LangChain & LangGraph
+langchain==1.2.13
+langchain-core==1.2.20
+langchain-openai==1.1.11
+langchain-community==0.4.1
+langgraph==1.1.3
+langgraph-checkpoint==4.0.1
+langgraph-checkpoint-sqlite==3.0.3
+langgraph-prebuilt==1.0.8
+
+# Data Validation
+pydantic==2.12.5
+pydantic-settings==2.13.1
+
+# Tools
+python-dotenv==1.0.0
+
+# Optional: Search Tools
+# tavily-python==0.7.17
+
+# Optional: Other LLM Providers
+# langchain-anthropic
+# langchain-google-genai
+# langchain-groq
+# langchain-ollama
+
+# Optional: Vector Databases
+# langchain-chroma
+# langchain-pinecone
+
+# Optional: Production Database
+# langgraph-checkpoint-postgres
