@@ -33,26 +33,17 @@ def create_agent_graph() -> StateGraph:
     # 获取 LLM 和工具
     llm = get_llm()
     tools = get_all_tools()
-    print(f"create_agent_graph: 加载了 {len(tools)} 个工具")
 
     # 如果有工具，绑定到 LLM
     if tools:
         llm_with_tools = llm.bind_tools(tools)
-        print(f"create_agent_graph: LLM 已绑定 {len(tools)} 个工具")
     else:
         llm_with_tools = llm
-        print(f"create_agent_graph: 没有可用工具")
 
     # 定义节点
     def call_model(state: AgentState):
         """调用 LLM 模型"""
         messages = state.get("messages", [])
-        print(f"call_model: 收到 {len(messages)} 条消息")
-
-        for i, msg in enumerate(messages):
-            msg_type = type(msg).__name__
-            content = msg.content if hasattr(msg, 'content') else str(msg)
-            print(f"call_model: 消息[{i}] 类型: {msg_type}, 内容: {str(content)[:80]}")
 
         # 添加系统提示
         system_message = SystemMessage(
@@ -60,46 +51,19 @@ def create_agent_graph() -> StateGraph:
         )
 
         # 处理消息：清除 AIMessage 中已执行的 tool_calls
-        from langchain_core.messages import AIMessage
         processed_messages = []
         for msg in messages:
             if isinstance(msg, AIMessage) and hasattr(msg, 'tool_calls') and msg.tool_calls:
-                # 清除 tool_calls 因为这些工具调用已经被执行过了
-                print(f"call_model: 清除 AIMessage 中的 tool_calls (数量: {len(msg.tool_calls)})")
                 msg = AIMessage(content=msg.content)
             processed_messages.append(msg)
 
-        # 准备发送给 LLM 的消息
-        llm_messages = [system_message] + processed_messages
-        print(f"call_model: 准备调用 LLM，输入消息数: {len(llm_messages)}")
-        
-        # 详细打印每条消息
-        for i, msg in enumerate(llm_messages):
-            msg_type = type(msg).__name__
-            print(f"call_model: LLM消息[{i}] 类型: {msg_type}")
-            if hasattr(msg, 'content'):
-                print(f"call_model: LLM消息[{i}] content长度: {len(str(msg.content))}")
-                print(f"call_model: LLM消息[{i}] content前100字符: {str(msg.content)[:100]}")
-            if hasattr(msg, 'type'):
-                print(f"call_model: LLM消息[{i}] type属性: {msg.type}")
-            if hasattr(msg, 'role'):
-                print(f"call_model: LLM消息[{i}] role属性: {msg.role}")
-            if hasattr(msg, 'tool_calls'):
-                print(f"call_model: LLM消息[{i}] tool_calls: {msg.tool_calls}")
-            if hasattr(msg, 'tool_call_id'):
-                print(f"call_model: LLM消息[{i}] tool_call_id: {msg.tool_call_id}")
-            if hasattr(msg, 'name'):
-                print(f"call_model: LLM消息[{i}] name: {msg.name}")
-
         # 调用模型
-        response = llm_with_tools.invoke(llm_messages)
-        print(f"call_model: 收到响应 - 类型: {type(response).__name__}, tool_calls: {getattr(response, 'tool_calls', None)}")
+        response = llm_with_tools.invoke([system_message] + processed_messages)
 
         return {"messages": [response]}
 
     # 使用 ToolNode 处理工具调用
     tool_node = ToolNode(tools)
-    print(f"create_agent_graph: 创建 ToolNode，工具数: {len(tools)}")
 
     # 构建图
     builder = StateGraph(AgentState)
@@ -120,9 +84,7 @@ def create_agent_graph() -> StateGraph:
 
         last_message = messages[-1]
         if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
-            print(f"should_call_tools: 检测到 tool_calls，调用 tools")
             return "tools"
-        print(f"should_call_tools: 无 tool_calls，结束")
         return "end"
 
     builder.add_conditional_edges(
@@ -142,7 +104,6 @@ def create_agent_graph() -> StateGraph:
     checkpointer = get_checkpointer()
 
     graph = builder.compile(checkpointer=checkpointer)
-    print(f"create_agent_graph: 图编译完成")
 
     return graph
 

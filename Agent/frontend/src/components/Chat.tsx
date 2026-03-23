@@ -86,26 +86,18 @@ export default function Chat({
     ]);
 
     try {
-      console.log('开始发送消息，模式:', useStream ? '流式' : '普通');
-      console.log('当前消息数量:', messages.length);
-
       if (useStream) {
-        // 流式模式 - 使用 ref 累积内容避免频繁渲染
         const accumulatedContentRef = { current: '' };
         let lastUpdateTime = Date.now();
-        const UPDATE_INTERVAL = 50; // 每50ms最多更新一次
+        const UPDATE_INTERVAL = 50;
 
-        console.log('开始流式请求...');
         abortControllerRef.current = await streamMessage(
           {
             message: userMessage.content,
             thread_id: threadId,
           },
           (chunk) => {
-            console.log('收到 chunk:', chunk);
             accumulatedContentRef.current += chunk;
-
-            // 节流更新：只有超过间隔时间才更新 state
             const now = Date.now();
             if (now - lastUpdateTime >= UPDATE_INTERVAL) {
               lastUpdateTime = now;
@@ -120,8 +112,6 @@ export default function Chat({
             }
           },
           () => {
-            console.log('流式传输完成');
-            // 确保最后内容被更新
             setMessages(prev => {
               const newMessages = prev.map((msg, idx) =>
                 idx === prev.length - 1
@@ -133,7 +123,6 @@ export default function Chat({
             setIsLoading(false);
           },
           (error) => {
-            console.error('Stream error:', error);
             setMessages(prev =>
               prev.map((msg, idx) =>
                 idx === prev.length - 1
@@ -145,30 +134,23 @@ export default function Chat({
           }
         );
       } else {
-        // 普通模式
-        console.log('发送普通请求...');
         const response = await sendMessage({
           message: userMessage.content,
           thread_id: threadId,
         });
 
-        console.log('收到响应:', response);
-
-        // 更新助手消息
         setMessages(prev => {
           const newMessages = prev.map((msg, idx) =>
             idx === prev.length - 1
               ? { ...msg, content: response.message }
               : msg
           );
-          console.log('更新后消息数量:', newMessages.length);
           return newMessages;
         });
 
         setIsLoading(false);
       }
     } catch (error) {
-      console.error('Send message error:', error);
       setMessages(prev =>
         prev.map((msg, idx) =>
           idx === prev.length - 1

@@ -32,20 +32,12 @@ def search_web(query: str) -> str:
     from app.config.settings import settings
 
     api_key = settings.TAVILY_API_KEY
-    print(f"search_web: 从 settings 获取 API key: {api_key[:10] if api_key else 'None'}...")
-
     if not api_key:
         return "错误：未配置 TAVILY_API_KEY，请检查 .env 文件"
 
-    # 初始化 Tavily 客户端
     tavily = TavilyClient(api_key=api_key)
-
-    # 执行搜索
-    print(f"search_web: 正在执行搜索: {query}")
     response = tavily.search(query=query, search_depth="basic")
-    print(f"search_web: 搜索完成，找到 {len(response.get('results', []))} 条结果")
 
-    # 格式化结果 - 只显示域名，不显示完整 URL
     results = []
     for i, result in enumerate(response.get("results", [])):
         domain = extract_domain(result.get('url', ''))
@@ -63,15 +55,14 @@ def search_web(query: str) -> str:
 def calculator(expression: str) -> float:
     """
     计算数学表达式
-    
+
     Args:
         expression: 数学表达式，如 "2 + 2"
-        
+
     Returns:
         计算结果
     """
     try:
-        # 注意：在生产环境中应该使用更安全的计算方法
         return eval(expression)
     except Exception as e:
         return f"计算错误：{str(e)}"
@@ -82,7 +73,7 @@ def calculator(expression: str) -> float:
 def get_current_time() -> str:
     """
     获取当前时间
-    
+
     Returns:
         当前时间字符串
     """
