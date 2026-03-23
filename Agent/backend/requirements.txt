@@ -23,7 +23,7 @@ pydantic-settings==2.13.1
 python-dotenv==1.0.0
 
 # Optional: Search Tools
-# tavily-python==0.7.17
+tavily-python==0.7.17
 
 # Optional: Other LLM Providers
 # langchain-anthropic

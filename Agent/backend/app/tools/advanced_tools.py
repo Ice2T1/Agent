@@ -12,45 +12,7 @@ import json
 # 搜索类工具（需要 API Key）
 # ============================================
 
-@register_tool
-@tool
-def search_wikipedia(query: str, max_results: int = 3) -> str:
-    """
-    搜索维基百科
-    
-    Args:
-        query: 搜索查询
-        max_results: 最大结果数
-        
-    Returns:
-        维基百科摘要
-    """
-    try:
-        # 需要安装：pip install wikipedia
-        # import wikipedia
-        # wikipedia.set_lang("zh")  # 设置中文
-        # results = wikipedia.search(query, results=max_results)
-        # return wikipedia.summary(results[0]) if results else "未找到相关内容"
-        
-        return "维基百科搜索工具（待实现）"
-    except Exception as e:
-        return f"搜索错误：{str(e)}"
 
-
-@register_tool
-@tool
-def get_weather(city: str) -> str:
-    """
-    获取天气信息
-    
-    Args:
-        city: 城市名称
-        
-    Returns:
-        天气信息
-    """
-    # TODO: 集成天气 API（如 OpenWeatherMap）
-    return f"{city}的天气信息（待实现）"
 
 
 # ============================================

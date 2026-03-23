@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     # 检查点配置
     CHECKPOINT_ENABLED: bool = True
     
+    # 搜索工具配置
+    TAVILY_API_KEY: Optional[str] = None
+    
     class Config:
         env_file = ".env"
         case_sensitive = True
